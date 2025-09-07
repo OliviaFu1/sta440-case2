@@ -106,3 +106,50 @@ ggplot(sum_df, aes(dose, mean, color = group, group = group)) +
 ```
 
 **Model Fitting & Testing**
+
+```{r}
+# data frame for LME
+library(dplyr)
+
+dose_levels <- c("-14.49","-14.36","-14.19","-13.95","-13.65","-12.95")
+
+data_lme <- data_cleaned %>%
+  # exclude basal for modeling
+  filter(dose != "Basal") %>%
+  mutate(group = factor(group, levels = c("NT","Tg")),
+         substrate = factor(substrate),
+         dose = factor(dose, levels = dose_levels, ordered = TRUE),
+    dose_num  = as.numeric(dose),
+    Subject = factor(Subject)
+  )
+```
+
+```{r}
+# linear mixed effects model: all possible interaction terms
+library(lme4)
+
+lme_all <- lmer(
+  Value ~ group * substrate * dose + (1 + dose_num | Subject),
+  data = data_lme,
+  REML = TRUE,
+  control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+)
+
+summary(lme_all)
+```
+
+```{r}
+# exclude higher-order polynomial terms for dose from model above
+data_lme_L <- data_lme %>%
+  mutate(dose_num  = as.numeric(as.character(dose)),
+         dose_numc = scale(dose_num, center = TRUE, scale = FALSE))
+
+lme_all_L <- lmer(
+  Value ~ group * substrate * dose_numc + (1 + dose_num | Subject),
+  data = data_lme_L,
+  REML = TRUE,
+  control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+)
+
+summary(lme_all_L)
+```
