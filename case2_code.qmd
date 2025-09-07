@@ -1,8 +1,11 @@
 ---
-title: "case2_code"
+title: "STA 440 Case 2: Code Script"
+author: "Olivia Fu, Christina Lee, Eunice Lee"
 format: pdf
 editor: visual
 ---
+
+## Package Import & Data Cleaning
 
 ```{r}
 library(dplyr)
@@ -52,7 +55,9 @@ data_cleaned <- data |>
   )
 ```
 
-## EDA
+## Exploratory Data Analysis
+
+**Trend Exploration & Visualization**
 
 ```{r}
 # treat dose as ordered categorical levels
@@ -99,3 +104,5 @@ ggplot(sum_df, aes(dose, mean, color = group, group = group)) +
   theme_bw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
+**Model Fitting & Testing**
