@@ -161,37 +161,6 @@ library(MuMIn)
 library(knitr)  
 library(dplyr)
 
-model_metrics <- function(model, data, name) {
-  r2 <- suppressWarnings(r.squaredGLMM(model))
-  data.frame(
-    Model       = name,
-    AIC         = AIC(model),
-    BIC         = BIC(model),
-    Marginal_R2 = r2[1],
-    Conditional_R2 = r2[2])
-}
-
-results <- bind_rows(
-  model_metrics(lme_all, data_lme, "data_lme"),
-  model_metrics(lme_all_L, data_lme_L, "Linear dose only")
-)
-
-kable(results, digits = 3, caption = "Model Comparison: lme_all vs lme_all_L")
-```
-```{r}
-# residual and QQ plots
-par(mfrow=c(2,2))
-
-# lme_all
-plot(fitted(lme_all), resid(lme_all), main="lme_all residuals")
-qqnorm(resid(lme_all)); qqline(resid(lme_all))
-
-# lme_all_L
-plot(fitted(lme_all_L), resid(lme_all_L), main="lme_all_L residuals")
-qqnorm(resid(lme_all_L)); qqline(resid(lme_all_L))
-```
-
-```{r}
 # this one individually calculates RMSE
 cv_rmse <- function(model, data, k = 5) {
   set.seed(123)
@@ -233,6 +202,20 @@ cv_rmse <- function(model, data, k = 5) {
   mean(rmses, na.rm = TRUE)
 }
 
+# calculating metrics
+model_metrics <- function(model, data, name) {
+  r2 <- suppressWarnings(r.squaredGLMM(model))
+  rmse <- tryCatch(cv_rmse(model, data), error = function(e) NA)
+  data.frame(
+    Model          = name,
+    AIC            = AIC(model),
+    BIC            = BIC(model),
+    Marginal_R2    = r2[1],
+    Conditional_R2 = r2[2],
+    CV_RMSE        = rmse
+  )
+}
+
 results_all <- model_metrics(lme_all, data_lme, "data_lme")
 results_lin <- model_metrics(lme_all_L, data_lme_L, "data_lme_L")
 
@@ -243,6 +226,18 @@ results <- bind_rows(results_all, results_lin) |>
   )
 
 kable(results, digits = 3, caption = "Model Comparison with Cross-Validated RMSE")
+```
+```{r}
+# residual and QQ plots
+par(mfrow=c(2,2))
+
+# lme_all
+plot(fitted(lme_all), resid(lme_all), main="lme_all residuals")
+qqnorm(resid(lme_all)); qqline(resid(lme_all))
+
+# lme_all_L
+plot(fitted(lme_all_L), resid(lme_all_L), main="lme_all_L residuals")
+qqnorm(resid(lme_all_L)); qqline(resid(lme_all_L))
 ```
 
 
