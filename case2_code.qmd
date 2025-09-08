@@ -153,3 +153,98 @@ lme_all_L <- lmer(
 
 summary(lme_all_L)
 ```
+
+** Model Comparison **
+```{r}
+install.packages("MuMIn")
+library(MuMIn)   
+library(knitr)  
+library(dplyr)
+
+model_metrics <- function(model, data, name) {
+  r2 <- suppressWarnings(r.squaredGLMM(model))
+  data.frame(
+    Model       = name,
+    AIC         = AIC(model),
+    BIC         = BIC(model),
+    Marginal_R2 = r2[1],
+    Conditional_R2 = r2[2])
+}
+
+results <- bind_rows(
+  model_metrics(lme_all, data_lme, "data_lme"),
+  model_metrics(lme_all_L, data_lme_L, "Linear dose only")
+)
+
+kable(results, digits = 3, caption = "Model Comparison: lme_all vs lme_all_L")
+```
+```{r}
+# residual and QQ plots
+par(mfrow=c(2,2))
+
+# lme_all
+plot(fitted(lme_all), resid(lme_all), main="lme_all residuals")
+qqnorm(resid(lme_all)); qqline(resid(lme_all))
+
+# lme_all_L
+plot(fitted(lme_all_L), resid(lme_all_L), main="lme_all_L residuals")
+qqnorm(resid(lme_all_L)); qqline(resid(lme_all_L))
+```
+
+```{r}
+# this one individually calculates RMSE
+cv_rmse <- function(model, data, k = 5) {
+  set.seed(123)
+  folds <- sample(rep(1:k, length.out = nrow(data)))
+  rmses <- numeric(k)
+
+  for (i in 1:k) {
+    train <- data[folds != i, ]
+    test  <- data[folds == i, ]
+
+    # Refit model on training set
+    fit <- tryCatch(update(model, data = train), error = function(e) NULL)
+    if (is.null(fit)) {
+      rmses[i] <- NA
+      next
+    }
+
+    # Force factor levels in test to match training
+    for (col in names(train)) {
+      if (is.factor(train[[col]])) {
+        test[[col]] <- factor(test[[col]], levels = levels(train[[col]]))
+      }
+    }
+
+    # Predict safely
+    pred <- tryCatch(
+      predict(fit, newdata = test, allow.new.levels = TRUE),
+      error = function(e) rep(NA, nrow(test))
+    )
+
+    # Compute RMSE if predictions succeeded
+    if (all(is.na(pred))) {
+      rmses[i] <- NA
+    } else {
+      rmses[i] <- sqrt(mean((test$Value - pred)^2, na.rm = TRUE))
+    }
+  }
+
+  mean(rmses, na.rm = TRUE)
+}
+
+results_all <- model_metrics(lme_all, data_lme, "data_lme")
+results_lin <- model_metrics(lme_all_L, data_lme_L, "data_lme_L")
+
+results <- bind_rows(results_all, results_lin) |>
+  mutate(
+    dAIC = AIC - min(AIC),
+    dBIC = BIC - min(BIC)
+  )
+
+kable(results, digits = 3, caption = "Model Comparison with Cross-Validated RMSE")
+```
+
+
+
+
