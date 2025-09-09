@@ -64,17 +64,11 @@ data_cleaned <- data |>
 ### **Trend Exploration & Visualization**
 
 ```{r}
-# treat dose as ordered categorical levels
-# group by NT/Tg to see the difference
-# dose_levels <- c("-14.49","-14.36","-14.19","-13.95","-13.65","-12.95")
-
 data_plot <- data_cleaned |>
   # don't include basal in the plot
   filter(dose != "Basal") |>
   # treat dose as continuous numeric values
   mutate(dose = as.numeric(dose))
-
-# mutate(dose = factor(dose, levels = dose_levels, ordered = TRUE))
 ```
 
 ```{r}
@@ -118,6 +112,47 @@ ggplot(sum_df, aes(dose, mean, color = group, group = group)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
+```{r}
+# treat dose as ordered categorical levels
+dose_levels <- c("-14.49","-14.36","-14.19","-13.95","-13.65","-12.95")
+
+data_plot_ordinal <- data_cleaned |>
+  # don't include basal in the plot
+  filter(dose != "Basal") |>
+  # treat dose as continuous numeric values
+  # mutate(dose = as.numeric(dose))
+  mutate(dose = factor(dose, levels = dose_levels, ordered = TRUE))
+
+ggplot(data_plot_ordinal, aes(dose, Value,
+                              group = interaction(Subject, substrate),
+                              color = group)) +
+  geom_line(alpha = 0.35) +
+  geom_point(alpha = 0.7, size = 1.8) +
+  facet_wrap(~ substrate) +
+  labs(x = expression(Delta*G[ATP]), y = "JO2") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+# calculate mean and se for each group
+sum_df_ordinal <- data_plot_ordinal |>
+  group_by(substrate, group, dose) |>
+  summarise(mean = mean(Value, na.rm = TRUE),
+            se   = sd(Value, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
+            .groups = "drop")
+
+ggplot(sum_df_ordinal, aes(dose, mean, color = group, group = group)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean - se, 
+                    ymax = mean + se), 
+                width = 0.12) +
+  facet_wrap(~ substrate) +
+  labs(x = expression(Delta*G[ATP]),
+       y = "JO2 (mean +- SE)") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 **Incorporating basal levels**
 
 ```{r}
@@ -130,7 +165,7 @@ basal_pos <- min_dose - 0.5
 sum_df_basal <- data_cleaned |>
   group_by(substrate, group, dose) |>
   summarise(mean = mean(Value, na.rm = TRUE),
-            se = sd(Value, na.rm = TRUE)/sqrt(n()),
+            se = sd(Value, na.rm = TRUE)/sqrt(sum(!is.na(Value))),
             .groups = "drop") |>
   mutate(dose_num = ifelse(dose == "Basal", basal_pos, as.numeric(dose)))
 
@@ -171,11 +206,11 @@ sum_df2 <- data_norm |>
   group_by(substrate, group, dose) |>
   summarise(
     mean_delta = mean(delta, na.rm = TRUE),
-    se_delta = sd(delta, na.rm = TRUE) / sqrt(n()),
+    se_delta = sd(delta, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
     mean_pct = mean(pct, na.rm = TRUE),
-    se_pct   = sd(pct, na.rm = TRUE) / sqrt(n()),
+    se_pct   = sd(pct, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
     mean_log2FC = mean(log2FC, na.rm = TRUE),
-    se_log2FC = sd(log2FC, na.rm = TRUE) / sqrt(n()),
+    se_log2FC = sd(log2FC, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
     .groups = "drop"
   )
 ```
