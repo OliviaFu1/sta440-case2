@@ -55,8 +55,8 @@ data_cleaned <- data |>
   )
 
 # drop 28 observations because of 20 NA values
-data_cleaned <- data_cleaned |>
-  filter(!(Subject %in% c("NT6", "Tg6") & substrate %in% c("OcM", "PcM")))
+# data_cleaned <- data_cleaned |>
+  # filter(!(Subject %in% c("NT6", "Tg6") & substrate %in% c("OcM", "PcM")))
 ```
 
 ## Exploratory Data Analysis
@@ -96,8 +96,8 @@ ggplot(data_plot, aes(dose, Value,
 # calculate mean and se for each group
 sum_df <- data_plot |>
   group_by(substrate, group, dose) |>
-  summarise(mean = mean(Value),
-            se = sd(Value)/sqrt(n()),
+  summarise(mean = mean(Value, na.rm = TRUE),
+            se   = sd(Value, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
             .groups = "drop")
 ```
 
@@ -123,14 +123,14 @@ ggplot(sum_df, aes(dose, mean, color = group, group = group)) +
 ```{r}
 # plot Basal as a starting point
 # pick a numeric location for Basal
-min_dose <- min(as.numeric(sum_df$dose[sum_df$dose != "Basal"]))
+min_dose <- min(as.numeric(sum_df$dose[sum_df$dose != "Basal"]), na.rm = TRUE)
 basal_pos <- min_dose - 0.5
 
 # numeric x for plotting
 sum_df_basal <- data_cleaned |>
   group_by(substrate, group, dose) |>
-  summarise(mean = mean(Value),
-            se = sd(Value)/sqrt(n()),
+  summarise(mean = mean(Value, na.rm = TRUE),
+            se = sd(Value, na.rm = TRUE)/sqrt(n()),
             .groups = "drop") |>
   mutate(dose_num = ifelse(dose == "Basal", basal_pos, as.numeric(dose)))
 
@@ -170,12 +170,12 @@ data_norm <- data_plot |>
 sum_df2 <- data_norm |>
   group_by(substrate, group, dose) |>
   summarise(
-    mean_delta = mean(delta),
-    se_delta = sd(delta) / sqrt(n()),
-    mean_pct = mean(pct),
-    se_pct   = sd(pct) / sqrt(n()),
-    mean_log2FC = mean(log2FC),
-    se_log2FC = sd(log2FC) / sqrt(n()),
+    mean_delta = mean(delta, na.rm = TRUE),
+    se_delta = sd(delta, na.rm = TRUE) / sqrt(n()),
+    mean_pct = mean(pct, na.rm = TRUE),
+    se_pct   = sd(pct, na.rm = TRUE) / sqrt(n()),
+    mean_log2FC = mean(log2FC, na.rm = TRUE),
+    se_log2FC = sd(log2FC, na.rm = TRUE) / sqrt(n()),
     .groups = "drop"
   )
 ```
