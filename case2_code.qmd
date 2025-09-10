@@ -218,8 +218,8 @@ sum_df2 <- data_norm |>
 ```{r}
 # delta
 ggplot(sum_df2, aes(dose, mean_delta, color = group, group = group)) +
-  geom_line(linewidth = 0.8) +
-  geom_point(size = 2) +
+  geom_line() +
+  geom_point() +
   geom_errorbar(aes(ymin = mean_delta - se_delta, 
                     ymax = mean_delta + se_delta),
                 width = 0.12) +
@@ -235,8 +235,8 @@ ggplot(sum_df2, aes(dose, mean_delta, color = group, group = group)) +
 
 # % of change
 ggplot(sum_df2, aes(dose, mean_pct, color = group, group = group)) +
-  geom_line(linewidth = 0.8) +
-  geom_point(size = 2) +
+  geom_line() +
+  geom_point() +
   geom_errorbar(aes(ymin = mean_pct - se_pct, 
                     ymax = mean_pct + se_pct),
                 width = 0.12) +
@@ -252,8 +252,8 @@ ggplot(sum_df2, aes(dose, mean_pct, color = group, group = group)) +
 
 # log2 fold change
 ggplot(sum_df2, aes(dose, mean_log2FC, color = group, group = group)) +
-  geom_line(linewidth = 0.8) +
-  geom_point(size = 2) +
+  geom_line() +
+  geom_point() +
   geom_errorbar(aes(ymin = mean_log2FC - se_log2FC, 
                     ymax = mean_log2FC + se_log2FC),
                 width = 0.12) +
