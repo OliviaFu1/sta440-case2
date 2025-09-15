@@ -271,20 +271,19 @@ ggplot(sum_df2, aes(dose, mean_log2FC, color = group, group = group)) +
 ### **Model Fitting & Testing**
 
 ```{r}
-# data frame for LME
-library(dplyr)
+data_model <- data_cleaned |>
+  # exclude Basal and -12.95 for modeling
+  filter(dose != "Basal", dose != "-12.95") |>
+  # treat dose as numeric, others as factor
+  mutate(substrate = factor(substrate),
+         dose = as.numeric(dose),
+         Subject = factor(Subject),
+         Pair = factor(parse_number(as.character(Subject)))) |>
+  drop_na()
+```
 
-dose_levels <- c("-14.49","-14.36","-14.19","-13.95","-13.65","-12.95")
+```{r}
 
-data_lme <- data_cleaned %>%
-  # exclude basal for modeling
-  filter(dose != "Basal") %>%
-  mutate(group = factor(group, levels = c("NT","Tg")),
-         substrate = factor(substrate),
-         dose = factor(dose, levels = dose_levels, ordered = TRUE),
-    dose_num  = as.numeric(dose),
-    Subject = factor(Subject)
-  )
 ```
 
 ```{r}
