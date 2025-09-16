@@ -270,6 +270,8 @@ ggplot(sum_df2, aes(dose, mean_log2FC, color = group, group = group)) +
 
 ### **Model Fitting & Testing**
 
+#### Random effects
+
 ```{r}
 data_model <- data_cleaned |>
   # exclude Basal and -12.95 for modeling
@@ -283,123 +285,295 @@ data_model <- data_cleaned |>
 ```
 
 ```{r}
-
-```
-
-```{r}
-# linear mixed effects model: all possible interaction terms
 library(lme4)
 
-lme_all <- lmer(
-  Value ~ group * substrate * dose + (1 + dose_num | Subject),
-  data = data_lme,
-  REML = TRUE,
-  control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+lmm_full_pair <- lmer(
+  Value ~ group * substrate * dose +
+          (1 | Pair), 
+  data = data_model, REML = TRUE
 )
 
-summary(lme_all)
+summary(lmm_full_pair)
 ```
 
 ```{r}
-# exclude higher-order polynomial terms for dose from model above
-data_lme_L <- data_lme %>%
-  mutate(dose_num  = as.numeric(as.character(dose)),
-         dose_numc = scale(dose_num, center = TRUE, scale = FALSE))
-
-lme_all_L <- lmer(
-  Value ~ group * substrate * dose_numc + (1 + dose_num | Subject),
-  data = data_lme_L,
-  REML = TRUE,
-  control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+lmm_full_subject <- lmer(
+  Value ~ group * substrate * dose +
+        (1 | Subject),
+  data = data_model, REML = TRUE
 )
 
-summary(lme_all_L)
+summary(lmm_full_subject)
+```
+
+```{r}
+anova(lmm_full_pair, lmm_full_subject)
+```
+
+```{r}
+# Residuals vs Fitted
+par(mfrow = c(1, 2), oma = c(0, 0, 2, 0))  # 1 row, 2 columns
+
+plot(fitted(lmm_full_pair), resid(lmm_full_pair, type = "deviance"),
+     xlab = "Fitted (Pair)", ylab = "Residuals",
+     main = "Pair: resid vs fitted")
+abline(h = 0, lty = 2, col = "gray")
+
+plot(fitted(lmm_full_subject), resid(lmm_full_subject, type = "deviance"),
+     xlab = "Fitted (Subject)", ylab = "Residuals",
+     main = "Subject: resid vs fitted")
+abline(h = 0, lty = 2, col = "gray")
+
+mtext("Residuals vs Fitted Comparison", outer = TRUE, cex = 1.3)
+
+par(mfrow = c(1,1))
+```
+
+```{r}
+# QQ plots
+par(mfrow = c(1, 2), oma = c(0, 0, 2, 0))
+
+qqnorm(resid(lmm_full_pair), main = "Pair: QQ")
+qqline(resid(lmm_full_pair))
+
+qqnorm(resid(lmm_full_subject), main = "Subject: QQ")
+qqline(resid(lmm_full_subject))
+
+mtext("QQ Plots Comparison", outer = TRUE, cex = 1.3)
+
+par(mfrow = c(1,1))
+```
+
+```{r}
+# Boxplots of residuals by Pair / Subject
+par(mfrow=c(1,2))
+boxplot(resid(lmm_full_pair) ~ data_model$Pair, 
+        main="Residuals by Pair", 
+        xlab="Pair", ylab="Residual")
+boxplot(resid(lmm_full_subject) ~ data_model$Subject, 
+        main="Residuals by Subject", 
+        xlab="Subject", ylab="Residual")
+par(mfrow=c(1,1))
+```
+
+#### Interaction terms
+
+```{r}
+lmm_2ways_pair <- lmer(
+  Value ~ group * substrate + group * dose + substrate * dose +
+          (1 | Subject),
+  data = data_model, REML = TRUE
+)
+
+anova(update(lmm_2ways_pair, REML = FALSE), update(lmm_full_subject, REML = FALSE))
+```
+
+***FINAL MODEL: full 3-way interaction with subject as random effect (lmm_full_subject)***
+
+#### Evidence for genetic effects
+
+```{r}
+m_ML <- update(lmm_full_subject, REML = FALSE)
+
+# Remove ALL genotype terms (main + interactions)
+m_noG <- update(m_ML, . ~ . - group - group:substrate - group:dose - group:substrate:dose)
+anova(m_noG, m_ML)
+```
+
+```{r}
+# Does genotype depend on SUBSTRATE?
+m_noGxS <- update(m_ML, . ~ . - group:substrate - group:substrate:dose)
+anova(m_noGxS, m_ML)
+
+# Does genotype depend on DOSE?
+m_noGxD <- update(m_ML, . ~ . - group:dose - group:substrate:dose)
+anova(m_noGxD, m_ML)
+
+# Is the 3-way needed (genotype–dose dependence varies by substrate)?
+m_no3 <- update(m_ML, . ~ . - group:substrate:dose)
+anova(m_no3, m_ML)
+```
+
+```{r}
+## (A) Tg - NT difference WITHIN each substrate at low & high dose
+library(emmeans)
+
+low  <- min(data_model$dose)
+high <- max(data_model$dose)
+
+# EMMs for group, conditioned on substrate *and* dose (only lowest & highest dose)
+emm_sd <- emmeans(
+  lmm_full_subject,
+  ~ group | substrate * dose,
+  at = list(dose = c(low, high)),
+  weights = "equal"
+)
+
+# 12 rows total: (6 substrates) × (2 doses), each row is Tg − NT
+contr_12 <- contrast(emm_sd, method = "revpairwise",
+                     by = c("substrate","dose"))
+summary(contr_12, infer = TRUE)
+```
+
+```{r}
+## (B) Do genotype SLOPES differ (Genotype × Dose) within each substrate?
+slopes <- emtrends(lmm_full_subject, ~ group | substrate, var = "dose")
+slope_diff <- contrast(slopes, "revpairwise")  # (slope_Tg - slope_NT)
+summary(slope_diff, infer = TRUE)
+```
+
+```{r}
+# sequence of doses for smooth fitted curves
+dose_seq <- seq(min(data_model$dose),
+                max(data_model$dose),
+                length.out = 100)
+
+# build grid for predictions
+newdat <- expand_grid(
+  dose      = dose_seq,
+  substrate = unique(data_model$substrate),
+  group     = unique(data_model$group)
+)
+
+# predict fitted values (fixed effects only)
+newdat$pred <- predict(lmm_full_subject,
+                       newdata = newdat,
+                       re.form = NA)
+
+# plot: raw data as points, fitted as smooth lines
+ggplot() +
+  geom_point(data = data_model,
+             aes(x = dose, y = Value, color = group),
+             alpha = 0.5, size = 2) +
+  geom_line(data = newdat,
+            aes(x = dose, y = pred, color = group),
+            size = 1.2) +
+  facet_wrap(~ substrate, scales = "free_y") +
+  labs(x = expression(Delta*G[ATP]),
+       y = "JO2",
+       title = "JO2 vs dose by genotype and substrate") +
+  theme_bw() +
+  theme(legend.position = "top") +
+  scale_x_continuous(
+    breaks = c(-14.49, -14.36, -14.19, -13.95, -13.65, -12.95)
+  ) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+## Initial attempt
+
+```{r}
+# # linear mixed effects model: all possible interaction terms
+# lme_all <- lmer(
+#   Value ~ group * substrate * dose + (1 + dose_num | Subject),
+#   data = data_lme,
+#   REML = TRUE,
+#   control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+# )
+# 
+# summary(lme_all)
+```
+
+```{r}
+# # exclude higher-order polynomial terms for dose from model above
+# data_lme_L <- data_lme %>%
+#   mutate(dose_num  = as.numeric(as.character(dose)),
+#          dose_numc = scale(dose_num, center = TRUE, scale = FALSE))
+# 
+# lme_all_L <- lmer(
+#   Value ~ group * substrate * dose_numc + (1 + dose_num | Subject),
+#   data = data_lme_L,
+#   REML = TRUE,
+#   control = lmerControl(optimizer = "bobyqa", optCtrl = list(maxfun = 1e5))
+# )
+# 
+# summary(lme_all_L)
 ```
 
 \*\* Model Comparison \*\*
 
 ```{r}
-install.packages("MuMIn")
-library(MuMIn)   
-library(knitr)  
-library(dplyr)
-
-# this one individually calculates RMSE
-cv_rmse <- function(model, data, k = 5) {
-  set.seed(123)
-  folds <- sample(rep(1:k, length.out = nrow(data)))
-  rmses <- numeric(k)
-
-  for (i in 1:k) {
-    train <- data[folds != i, ]
-    test  <- data[folds == i, ]
-
-    # Refit model on training set
-    fit <- tryCatch(update(model, data = train), error = function(e) NULL)
-    if (is.null(fit)) {
-      rmses[i] <- NA
-      next
-    }
-
-    # Force factor levels in test to match training
-    for (col in names(train)) {
-      if (is.factor(train[[col]])) {
-        test[[col]] <- factor(test[[col]], levels = levels(train[[col]]))
-      }
-    }
-
-    # Predict safely
-    pred <- tryCatch(
-      predict(fit, newdata = test, allow.new.levels = TRUE),
-      error = function(e) rep(NA, nrow(test))
-    )
-
-    # Compute RMSE if predictions succeeded
-    if (all(is.na(pred))) {
-      rmses[i] <- NA
-    } else {
-      rmses[i] <- sqrt(mean((test$Value - pred)^2, na.rm = TRUE))
-    }
-  }
-
-  mean(rmses, na.rm = TRUE)
-}
-
-# calculating metrics
-model_metrics <- function(model, data, name) {
-  r2 <- suppressWarnings(r.squaredGLMM(model))
-  rmse <- tryCatch(cv_rmse(model, data), error = function(e) NA)
-  data.frame(
-    Model          = name,
-    AIC            = AIC(model),
-    BIC            = BIC(model),
-    Marginal_R2    = r2[1],
-    Conditional_R2 = r2[2],
-    CV_RMSE        = rmse
-  )
-}
-
-results_all <- model_metrics(lme_all, data_lme, "data_lme")
-results_lin <- model_metrics(lme_all_L, data_lme_L, "data_lme_L")
-
-results <- bind_rows(results_all, results_lin) |>
-  mutate(
-    dAIC = AIC - min(AIC),
-    dBIC = BIC - min(BIC)
-  )
-
-kable(results, digits = 3, caption = "Model Comparison with Cross-Validated RMSE")
+# install.packages("MuMIn")
+# library(MuMIn)   
+# library(knitr)  
+# library(dplyr)
+# 
+# # this one individually calculates RMSE
+# cv_rmse <- function(model, data, k = 5) {
+#   set.seed(123)
+#   folds <- sample(rep(1:k, length.out = nrow(data)))
+#   rmses <- numeric(k)
+# 
+#   for (i in 1:k) {
+#     train <- data[folds != i, ]
+#     test  <- data[folds == i, ]
+# 
+#     # Refit model on training set
+#     fit <- tryCatch(update(model, data = train), error = function(e) NULL)
+#     if (is.null(fit)) {
+#       rmses[i] <- NA
+#       next
+#     }
+# 
+#     # Force factor levels in test to match training
+#     for (col in names(train)) {
+#       if (is.factor(train[[col]])) {
+#         test[[col]] <- factor(test[[col]], levels = levels(train[[col]]))
+#       }
+#     }
+# 
+#     # Predict safely
+#     pred <- tryCatch(
+#       predict(fit, newdata = test, allow.new.levels = TRUE),
+#       error = function(e) rep(NA, nrow(test))
+#     )
+# 
+#     # Compute RMSE if predictions succeeded
+#     if (all(is.na(pred))) {
+#       rmses[i] <- NA
+#     } else {
+#       rmses[i] <- sqrt(mean((test$Value - pred)^2, na.rm = TRUE))
+#     }
+#   }
+# 
+#   mean(rmses, na.rm = TRUE)
+# }
+# 
+# # calculating metrics
+# model_metrics <- function(model, data, name) {
+#   r2 <- suppressWarnings(r.squaredGLMM(model))
+#   rmse <- tryCatch(cv_rmse(model, data), error = function(e) NA)
+#   data.frame(
+#     Model          = name,
+#     AIC            = AIC(model),
+#     BIC            = BIC(model),
+#     Marginal_R2    = r2[1],
+#     Conditional_R2 = r2[2],
+#     CV_RMSE        = rmse
+#   )
+# }
+# 
+# results_all <- model_metrics(lme_all, data_lme, "data_lme")
+# results_lin <- model_metrics(lme_all_L, data_lme_L, "data_lme_L")
+# 
+# results <- bind_rows(results_all, results_lin) |>
+#   mutate(
+#     dAIC = AIC - min(AIC),
+#     dBIC = BIC - min(BIC)
+#   )
+# 
+# kable(results, digits = 3, caption = "Model Comparison with Cross-Validated RMSE")
 ```
 
 ```{r}
-# residual and QQ plots
-par(mfrow=c(2,2))
-
-# lme_all
-plot(fitted(lme_all), resid(lme_all), main="lme_all residuals")
-qqnorm(resid(lme_all)); qqline(resid(lme_all))
-
-# lme_all_L
-plot(fitted(lme_all_L), resid(lme_all_L), main="lme_all_L residuals")
-qqnorm(resid(lme_all_L)); qqline(resid(lme_all_L))
+# # residual and QQ plots
+# par(mfrow=c(2,2))
+# 
+# # lme_all
+# plot(fitted(lme_all), resid(lme_all), main="lme_all residuals")
+# qqnorm(resid(lme_all)); qqline(resid(lme_all))
+# 
+# # lme_all_L
+# plot(fitted(lme_all_L), resid(lme_all_L), main="lme_all_L residuals")
+# qqnorm(resid(lme_all_L)); qqline(resid(lme_all_L))
 ```
