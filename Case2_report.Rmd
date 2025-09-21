@@ -17,9 +17,9 @@ editor: visual
 
 # Data and Exploratory Analysis
 
-# Model Selection, Implementation, and Evaluations
+# Model Rationale, Implementation, and Evaluations
 
-## Selection
+## Rationale & Selection
 
 ## Implementation
 
@@ -35,4 +35,154 @@ editor: visual
 
 ```{r include=FALSE}
 library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(readr)
+library(lme4)
+library(kableExtra)
+
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r load-data}
+data <- read_csv("JO2.csv", col_names = FALSE, show_col_types = FALSE)
+```
+
+```{r clean-data}
+# extract substrate and dose
+substrate  <- as.character(data[1, ])
+dose  <- as.character(data[2, ])
+
+# fill in substrate for each column
+substrate <- trimws(sub("\\s*\\(.*\\)$", "", substrate))
+substrate <- na_if(substrate, "")
+substrate <- na_if(substrate, "NA")
+substrate <- fill(tibble(Substrate = substrate),
+                         Substrate, .direction = "down")$Substrate
+
+# build new column names
+new_names <- ifelse(tolower(dose) == "subject", "Subject",
+                    paste0(substrate, ".", dose))
+data <- data[-c(1,2), ]
+names(data) <- make.unique(new_names, sep = "_")
+
+# solve type issue
+val_cols <- setdiff(names(data), "Subject")
+data[val_cols] <- lapply(data[val_cols], function(x) {
+  if (is.character(x)) parse_number(x) else as.numeric(x)
+})
+
+# make the longer table
+data_cleaned <- data |>
+  pivot_longer(
+    cols = -Subject,
+    names_to     = c("substrate", "dose"),
+    names_pattern = "^([^.]+)\\.(.+)$",       # split once at first dot
+    values_to    = "Value"
+) |>
+  mutate(
+    group = ifelse(grepl("^NT", Subject, ignore.case=TRUE), "NT", "Tg")
+  )
+```
+
+```{r}
+data_plot <- data_cleaned |>
+  # don't include basal in the plot
+  filter(dose != "Basal") |>
+  # treat dose as continuous numeric values
+  mutate(dose = as.numeric(dose))
+```
+
+```{r fig-1, fig.cap="Scatterplots of $J O_{2}$ versus $\\Delta G_{ATP}$, faceted by substrate type and separated by genotype (Tg in teal, NT in red). Each point represents an individual observation. The plots illustrate generally higher $J O_{2}$ in Tg mitochondria, increasing trends with dose, and variability in baseline metabolic activity across subjects.", warning=FALSE}
+
+ggplot(data_plot, aes(dose, Value,
+                      group = interaction(Subject, substrate),
+                      color = group)) +
+  geom_line(alpha = 0.35) +
+  geom_point(alpha = 0.7, size = 1.8) +
+  facet_wrap(~ substrate) +
+  labs(x = expression(Delta*G[ATP]), y = "JO2") +
+  scale_x_continuous(
+    breaks = c(-14.49, -14.36, -14.19, -13.95, -13.65, -12.95)
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r fig-2, fig.cap="Mean $J O_{2}$ with standard errors plotted against $\\Delta G_{ATP}$, grouped by substrate and genotype. Excluding the $-12.95\\, \\Delta G_{ATP}$ condition, the relationship between $J O_{2}$ and workload appears approximately linear. Genotype effects are consistent for OcM and PcM, while they become more pronounced at higher workloads for GM, PM, PMOc, and PMPc.", warning=FALSE}
+
+# calculate mean and se for each group
+sum_df <- data_plot |>
+  group_by(substrate, group, dose) |>
+  summarise(mean = mean(Value, na.rm = TRUE),
+            se   = sd(Value, na.rm = TRUE) / sqrt(sum(!is.na(Value))),
+            .groups = "drop")
+
+ggplot(sum_df, aes(dose, mean, color = group, group = group)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = mean - se, 
+                    ymax = mean + se), 
+                width = 0.12) +
+  facet_wrap(~ substrate) +
+  labs(x = expression(Delta*G[ATP]),
+       y = "JO2 (mean +- SE)") +
+  scale_x_continuous(
+    breaks = c(-14.49, -14.36, -14.19, -13.95, -13.65, -12.95)
+  ) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+data_model <- data_cleaned |>
+  # exclude Basal and -12.95 for modeling
+  filter(dose != "Basal", dose != "-12.95") |>
+  # treat dose as numeric, others as factor
+  mutate(substrate = factor(substrate),
+         dose = as.numeric(dose),
+         Subject = factor(Subject),
+         Pair = factor(parse_number(as.character(Subject)))) |>
+  drop_na()
+```
+
+```{r}
+# our final model
+lmm_full_subject <- lmer(
+  Value ~ group * substrate * dose +
+        (1 | Subject),
+  data = data_model, REML = TRUE
+)
+```
+
+```{r message=FALSE}
+# compare with pair random effect
+lmm_full_pair <- lmer(
+  Value ~ group * substrate * dose +
+          (1 | Pair), 
+  data = data_model, REML = TRUE
+)
+
+comp_random <- anova(lmm_full_pair, lmm_full_subject)
+
+kable(comp_random, 
+      digits = 3, 
+      caption = "Model comparison between pair and subject random effects") |>
+  kable_styling(latex_options = "HOLD_position")
+```
+
+```{r message=FALSE}
+# compare with 2-way interaction terms
+lmm_2ways_subject <- lmer(
+  Value ~ group * substrate + group * dose + substrate * dose +
+          (1 | Subject),
+  data = data_model, REML = TRUE
+)
+
+comp_fix <- anova(lmm_2ways_subject, lmm_full_subject)
+
+kable(comp_fix, 
+      digits = 3, 
+      caption = "Model comparison between two-way interaction terms and full three-way interactions") |>
+  kable_styling(latex_options = "HOLD_position")
 ```
