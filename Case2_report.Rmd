@@ -1,0 +1,38 @@
+---
+title: "Project Title"
+author: "Olivia Fu, Christina Lee, Eunice Lee"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+  bookdown::pdf_document2:
+    latex_engine: xelatex
+    toc: false
+  bookdown::html_document2:
+    toc: true
+    number_sections: true
+    fig_caption: true
+editor: visual
+---
+
+# Background and Motivation
+
+# Data and Exploratory Analysis
+
+# Model Selection, Implementation, and Evaluations
+
+## Selection
+
+## Implementation
+
+## Evaluation
+
+# Results
+
+# Limitations and Conclusion
+
+\pagebreak
+
+# Appendix
+
+```{r include=FALSE}
+library(ggplot2)
+```
