@@ -35,6 +35,8 @@ Motivated by the study design and by patterns observed in our exploratory analys
 
 To determine the random effects structure, we compared a model with subject-level random effects to one with pair-level random effects. While each mouse subject may have a distinct baseline, paired subjects could share correlation because their measurements were conducted together. As shown in Table 1, the subject-level random effect model provided a better fit, with lower AIC and BIC values. We also evaluated the inclusion of interaction terms by comparing a model with only two-way interactions to a full model with all three-way interactions. According to Table 2, the full three-way interaction model again yielded lower AIC and BIC values.
 
+For \$i\$ = observation, \$j\$ = subject, our final model equation is as follows, where Substrate is a vector of 6 levels:
+
 $$
 \begin{aligned}
 JO2_{ij} = \beta_0 &+ \beta_1 Group_i + \beta_2 Dose_i + \beta_3^{\top} Substrate_i \\
@@ -42,6 +44,8 @@ JO2_{ij} = \beta_0 &+ \beta_1 Group_i + \beta_2 Dose_i + \beta_3^{\top} Substrat
 &+ \beta_7^{\top} (Group_i*Dose_i*Substrate_i) + u_j + \varepsilon_{ij}
 \end{aligned}
 $$
+
+Actual values for each \$\\beta\$ coefficient of our final model can be found in Table ##.
 
 $$
 \begin{aligned}
@@ -63,6 +67,12 @@ To evaluate whether the model provided a good fit for the data, we examined mult
 Additionally, the marginal (fixed effects) $R^2$ was 0.90, and the conditional (fixed + random effects) $R^2$ was 0.97 (Table 3). This means Genotype, Substrate, Dose, and their interactions explained about 90% of the variation in $JO_2$. When the random effects were also included, this explained 97% of the variation. These high $R^2$ values support that the model is a good fit to the data. Overall, these diagnostics suggest that our model fits the data well and generally satisfies the regression assumptions.
 
 # Results
+
+To interpret the coefficients and p-values of fixed effects variables in our model, we found evidence in favor of overall genetic associations with mitochondrial efficiency, measured by oxygen flux. The baseline intercept of oxygen flux was significantly higher in Tg groups over NT, and the Tg group showed an overall significantly steeper positive slope than NT as dose increased. Hence, there was evidence for Tg groups having overall higher mitochondrial efficiency than NT groups, and this effect depended on dose as the difference was greater at higher dose levels.
+
+To test for genetic effect dependent on substrate type, we conducted an Emmeans test? To test for difference in slopes between Tg and NT groups for each substrate. We found that the slope difference between treatment groups were significant only for GM, PMOc, and PMPc substrates, with steeper positive slopes for Tg than NT for all. This was as expected, as slope differences seemed more trivial for OcM, PcM, and PM in the visualization (Figure 3). However, OcM and PcM had significantly different baseline levels despite similar slopes, as observed by the consistently higher JO2 values for the Tg line almost parallel to the NT line. This provided us insight that genetic effect does depend on substrate, expressed by a higher rate for some substrates and baseline levels for others. No significant dependence was found for PM, however.
+
+For a comprehensive graphical summary of our model, we created a regression line plot for easy comparison between NT and Tg groups, faceted by each substrate. (Figure 3) This allows an efficient view of all association patterns in the metabolic assay data by visualizing differences in both slope and intercept of the model that varies by substrate.
 
 # Limitations and Conclusion
 
