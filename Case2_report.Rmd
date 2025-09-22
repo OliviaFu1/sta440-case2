@@ -40,6 +40,7 @@ library(tidyr)
 library(readr)
 library(lme4)
 library(kableExtra)
+library(patchwork)
 
 knitr::opts_chunk$set(echo = FALSE)
 ```
@@ -185,4 +186,64 @@ kable(comp_fix,
       digits = 3, 
       caption = "Model comparison between two-way interaction terms and full three-way interactions") |>
   kable_styling(latex_options = "HOLD_position")
+```
+
+```{r}
+# Plot residuals and random effects side by side
+par(mfrow = c(1, 2), las = 1)
+
+# Residuals Q-Q plot
+qqnorm(residuals(lmm_full_subject), main = "Residuals")
+qqline(residuals(lmm_full_subject), col = "red")
+
+# Random effects Q-Q plot (Subjects)
+qqnorm(unlist(ranef(lmm_full_subject)$Subject), main = "Random Effects")
+qqline(unlist(ranef(lmm_full_subject)$Subject), col = "red")
+```
+
+```{r}
+# Extract residuals and fitted values
+resid_vals <- resid(lmm_full_subject)
+fitted_vals <- fitted(lmm_full_subject)
+
+# Residuals vs Fitted plot
+p1 <- ggplot(data.frame(Fitted = fitted_vals, Residuals = resid_vals), 
+             aes(x = Fitted, y = Residuals)) +
+  geom_point(alpha = 0.6) +
+  geom_hline(yintercept = 0, color = "red", linetype = "dashed") +
+  theme_minimal() +
+  labs(title = "Residuals vs Fitted", x = "Fitted values", y = "Residuals")
+
+p1
+```
+
+```{r}
+# Extract residuals
+resid_vals <- resid(lmm_full_subject)
+
+# Add residuals to dataset
+data_resid <- data_model
+data_resid$Residuals <- resid_vals
+
+# Residuals vs group (categorical)
+p1 <- ggplot(data_resid, aes(x = group, y = Residuals)) +
+  geom_boxplot(outlier.colour = "red", alpha = 0.6) +
+  theme_minimal() +
+  labs(title = "Residuals by Group")
+
+# Residuals vs substrate (categorical)
+p2 <- ggplot(data_resid, aes(x = substrate, y = Residuals)) +
+  geom_boxplot(outlier.colour = "red", alpha = 0.6) +
+  theme_minimal() +
+  labs(title = "Residuals by Substrate")
+
+# Residuals vs dose (continuous or factor?)
+# If continuous:
+p3 <- ggplot(data_resid, aes(x = dose, y = Residuals)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "loess", se = FALSE, color = "blue") +
+  theme_minimal() +
+  labs(title = "Residuals by Dose")
+
+p1 + p2 + p3
 ```
