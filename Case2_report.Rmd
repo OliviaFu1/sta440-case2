@@ -1,5 +1,5 @@
 ---
-title: "Project Title"
+title: "Mitochondrial Efficiency: Oxygen Flux Trends by Transgenic Treatment Status"
 author: "Olivia Fu, Christina Lee, Eunice Lee"
 date: "`r format(Sys.Date(), '%B %d, %Y')`"
 output:
