@@ -15,52 +15,58 @@ editor: visual
 
 # Background and Motivation
 
-Researchers conducted a study to determine whether altering the genetic phenotype of mice influences mitochondrial function by measuring the metabolic efficiency under experimental conditions that varied in substrate type and energy demand. The aim was to compare activity levels between the control group (non-transgenic mice) and the treatment group (transgenic mice) using a multiplexed assay platform. To achieve this, the goal was to focus on building a modeling framework for the data, implementing a method for hypothesis testing to assess the genotype effect, and creating a graphical summary that could effectively highlight any patterns or trends shown in the data. The analysis focused on oxygen consumption rate (JO2) across different substrates and doses in order to better understand how genetic differences may influence mitochondrial efficiency.
+Researchers conducted a study to determine whether altering the genetic phenotype of mice influences mitochondrial function by measuring the metabolic efficiency under experimental conditions that varied in substrate type and energy demand. The aim was to compare activity levels between the control group (non-transgenic mice) and the treatment group (transgenic mice) using a multiplexed assay platform. To achieve this, the goal was to focus on building a modeling framework for the data, implementing a method for hypothesis testing to assess the genotype effect, and creating a graphical summary that could effectively highlight any patterns or trends shown in the data. The analysis focused on oxygen consumption rate ($JO_2$) across different substrates and doses in order to better understand how genetic differences may influence mitochondrial efficiency.
 
 # Data and Exploratory Analysis
 
-The data for this analysis come from skeletal muscle mitochondria isolated from mice. Our primary outcome variable is JO2, the flux of oxygen, which reflects how much “work” mitochondria are capable of performing under given fuel and energy-demand conditions. We use JO2 as an indicator of metabolic efficiency. The main explanatory variable of interest is genotype, comparing mitochondria from transgenic (Tg) mice to those from non-transgenic (NT) controls, to evaluate whether genetic modification alters metabolic and functional phenotypes in mice. Additional design factors include substrate type and ΔGATP (dose), the latter reflecting the energetic workload imposed by the creatine kinase energy clamp.
+The data for this analysis come from skeletal muscle mitochondria isolated from mice. Our primary outcome variable is $JO_2$, the flux of oxygen, which reflects how much “work” mitochondria are capable of performing under given fuel and energy-demand conditions. We use $JO_2$ as an indicator of metabolic efficiency. The main explanatory variable of interest is genotype, comparing mitochondria from transgenic (`Tg`) mice to those from non-transgenic (`NT`) controls, to evaluate whether genetic modification alters metabolic and functional phenotypes in mice. Additional design factors include substrate type and $\Delta G_{ATP}$ (dose), the latter reflecting the energetic workload imposed by the creatine kinase energy clamp.
 
-We began with an exploratory analysis by plotting JO2 against ΔGATP, faceted by substrate type (Figure 1). Within each panel, data were further separated by genotype (Tg in teal, NT in red). We found that Tg mitochondria generally exhibited higher JO2 than NT mitochondria, suggesting greater respiratory capacity. Higher energetic demand (less negative ΔGATP) was associated with increased JO2, though the magnitude of this effect varied by substrate. In addition, each subject’s measurements appeared to start from a different baseline, implying that random intercepts for subjects may be appropriate in the modeling framework.
+We began with an exploratory analysis by plotting $JO_2$ against $\Delta G_{ATP}$, faceted by substrate type (Figure 1). Within each panel, data were further separated by genotype (`Tg` in teal, `NT` in red). We found that `Tg` mitochondria generally exhibited higher $JO_2$ than `NT` mitochondria, suggesting greater respiratory capacity. Higher energetic demand (less negative $\Delta G_{ATP}$) was associated with increased $JO_2$, though the magnitude of this effect varied by substrate. In addition, each subject’s measurements appeared to start from a different baseline, implying that random intercepts for subjects may be appropriate in the modeling framework.
 
-To better visualize overall trends, we next plotted group means with standard errors by substrate, genotype, and dose (Figure 2). Excluding the −12.95 ΔGATP condition, as recommended in the study protocol, JO2 increased approximately linearly with dose. Importantly, the effect of genotype varied by substrate. For OcM and PcM, the difference between Tg and NT remained relatively constant across doses, whereas for GM, PM, PMOc, and PMPc, the genotype effect widened at higher doses. These exploratory insights suggest that our model of JO2 should include interaction terms among genotype, substrate, and dose, while also accounting for individual-level variability.\
+To better visualize overall trends, we next plotted group means with standard errors by substrate, genotype, and dose (Figure 2). Excluding the −12.95 $\Delta G_{ATP}$ condition, as recommended in the study protocol, $JO_2$ increased approximately linearly with dose. Importantly, the effect of genotype varied by substrate. For `OcM` and `PcM`, the difference between `Tg` and `NT` remained relatively constant across doses, whereas for `GM`, `PM`, `PMOc`, and `PMPc`, the genotype effect widened at higher doses. These exploratory insights suggest that our model of $JO_2$ should include interaction terms among genotype, substrate, and dose, while also accounting for individual-level variability.\
 
 # Model Rationale, Implementation, and Evaluations
 
-We chose to use a linear mixed-effects model to analyze JO2, because the data structure and biological context both support this framework. The outcome of interest, flux of oxygen, is measured repeatedly across multiple substrate and workload conditions for each mouse. This results in correlated observations within the same subject, which violates the independence assumption of ordinary linear regression. A mixed model accounts for this correlation by including a subject-specific random effect, allowing us to control for baseline differences across individuals.
+## Rationale & Selection
 
-Motivated by the study design and by patterns observed in our exploratory analysis, We selected genotype, substrate, and dose as fixed effects for the model. Genotype is the primary explanatory variable of interest, while substrate type and ΔGATP level are essential design factors that capture differences in metabolic pathway and energetic demand. The exploratory plot (Figure 2) revealed main effects of genotype and dose, as well as evidence that the genotype effect varies across substrates and becomes more pronounced at higher doses. These observations provide strong justification for including interaction terms among genotype, substrate, and dose.\
+We chose to use a linear mixed-effects model to analyze $JO_2$, because the data structure and biological context both support this framework. The outcome of interest, flux of oxygen, is measured repeatedly across multiple substrate and workload conditions for each mouse. This results in correlated observations within the same subject, which violates the independence assumption of ordinary linear regression. A mixed model accounts for this correlation by including a subject-specific random effect, allowing us to control for baseline differences across individuals.
+
+Motivated by the study design and by patterns observed in our exploratory analysis, We selected genotype, substrate, and dose as fixed effects for the model. Genotype is the primary explanatory variable of interest, while substrate type and $\Delta G_{ATP}$ level are essential design factors that capture differences in metabolic pathway and energetic demand. The exploratory plot (Figure 2) revealed main effects of genotype and dose, as well as evidence that the genotype effect varies across substrates and becomes more pronounced at higher doses. These observations provide strong justification for including interaction terms among genotype, substrate, and dose.
 
 To determine the random effects structure, we compared a model with subject-level random effects to one with pair-level random effects. While each mouse subject may have a distinct baseline, paired subjects could share correlation because their measurements were conducted together. As shown in Table 1, the subject-level random effect model provided a better fit, with lower AIC and BIC values. We also evaluated the inclusion of interaction terms by comparing a model with only two-way interactions to a full model with all three-way interactions. According to Table 2, the full three-way interaction model again yielded lower AIC and BIC values.
 
-## Rationale & Selection
+$$
+\begin{aligned}
+JO2_{ij} = \beta_0 &+ \beta_1 Group_i + \beta_2 Dose_i + \beta_3^{\top} Substrate_i \\
+&+ \beta_4 (Group_i*Dose_i) + \beta_5^{\top} (Group_i*Substrate_i) + \beta_6^{\top} (Dose_i*Substrate_i) \\
+&+ \beta_7^{\top} (Group_i*Dose_i*Substrate_i) + u_j + \varepsilon_{ij}
+\end{aligned}
+$$
 
-Before model fitting, we cleaned the dataset by excluding the Basal condition and the −12.95 dose level, as these are not typically included in the analysis, and by removing observations with missing values. Doses were treated as a continuous numeric variable.
-
-The model was fit in R using the lmer() function from the lme4 package, with full three-way interaction terms for genotype, substrate, and dose (group\*substrate\*dose) and a random intercept for subject (1 \| Subject). This specification accounts for within-subject correlation and baseline variability.
+$$
+\begin{aligned}
+& u_j \sim N(0, \sigma^2_{\text{Subject}}) \\
+& \varepsilon_{ij} \sim N(0, \sigma^2)
+\end{aligned}
+$$
 
 ## Implementation
 
-$$
-JO2_{ij} = \beta_0 + \beta_1 Group_i + \beta_2 Dose_i + \beta_3^{\top} Substrate_i \\
-\quad + \beta_4 (Group_i*Dose_i) + \beta_5^{\top} (Group_i*Substrate_i) + \beta_6^{\top} (Dose_i*Substrate_i) \\
-\quad + \beta_7^{\top} (Group_i*Dose_i*Substrate_i) + u_j + \varepsilon_{ij}
-$$
+Before model fitting, we cleaned the dataset by excluding the `Basal` condition and the `−12.95` dose level, as these are not typically included in the analysis, and by removing observations with missing values. Doses were treated as a continuous numeric variable.
 
-$$
-u_j \sim N(0, \sigma^2_{\text{Subject}}) \\
-\varepsilon_{ij} \sim N(0, \sigma^2)
-$$
+The model was fit in R using the `lmer()` function from the `lme4` package, with full three-way interaction terms for genotype, substrate, and dose (`group*substrate*dose`) and a random intercept for subject (`1 | Subject`). This specification accounts for within-subject correlation and baseline variability.
 
 ## Evaluation
 
-To evaluate whether the model provided a good fit for the data, we examined multiple residual plots. The Q–Q plots for both Residuals and Random Effects (Figure 4) showed that most points lay close to the diagonal line, with only a few outliers present at the tails. This supports the normality assumption for our model. Furthermore, The Residuals vs. Fitted Values plot (Figure 5) showed that the points were randomly scattered around the zero line, which supports the constant variance assumption since there were no clear clustering or patterns present. To add on, the Residuals plotted by Group and Substrate (Figure 6) also showed no strong deviations, which suggested independence across these factors for our data. However, the residuals plotted by Dose (Figure 6) displayed a slight curvature, which may indicate potential nonlinearity in that variable. Additionally, the marginal (fixed effects) R2 was 0.90, and the conditional (fixed + random effects) R2 was 0.97 (Figure 7). This means Genotype, Substrate, Dose, and their interactions explained about 90% of the variation in JO₂. When the random effects were also included, this explained 97% of the variation. These high R2 values support that the model is a good fit to the data. Overall, these diagnostics suggest that our model fits the data well and generally satisfies the regression assumptions.
+To evaluate whether the model provided a good fit for the data, we examined multiple residual plots. The Q–Q plots for both Residuals and Random Effects (Figure 4) showed that most points lay close to the diagonal line, with only a few outliers present at the tails. This supports the normality assumption for our model. Furthermore, The Residuals vs. Fitted Values plot (Figure 5) showed that the points were randomly scattered around the zero line, which supports the constant variance assumption since there were no clear clustering or patterns present. To add on, the Residuals plotted by Group and Substrate (Figure 6) also showed no strong deviations, which suggested independence across these factors for our data. However, the residuals plotted by Dose (Figure 6) displayed a slight curvature, which may indicate potential nonlinearity in that variable.
+
+Additionally, the marginal (fixed effects) $R^2$ was 0.90, and the conditional (fixed + random effects) $R^2$ was 0.97 (Table 3). This means Genotype, Substrate, Dose, and their interactions explained about 90% of the variation in $JO_2$. When the random effects were also included, this explained 97% of the variation. These high $R^2$ values support that the model is a good fit to the data. Overall, these diagnostics suggest that our model fits the data well and generally satisfies the regression assumptions.
 
 # Results
 
 # Limitations and Conclusion
 
-Based on our analysis, due to the potential nonlinearity shown in the residual graph for Dose (Figure 6), we believe applying a log transformation or adding higher order terms in future work may help improve the model results. Since the Group and Substrate variables did not show any limitations to supporting the independence assumption, trying to evaluate and improve the Dose variable is a priority. Additionally, to address the few outliers present in the Residuals and Random Effects QQ Plot (Figure 4), taking a closer look at the data to evaluate these areas is important in order to find potential data entry errors or a cause to the skewed points. A transformation to the model and looking at other diagnostics including Cook’s distance or leverage are a part of the next steps to account for the normality assumption. To add on, because there could be potential confounding effects from dPsi, Redox, e-1 leak, auranofin, and cdnb, it would be beneficial to check for any correlations between these variables and JO2, Dose, and Substrate on a deeper level. Maybe getting access to the dataset with these points instead of looking solely based on the plots provided would help support a more thorough evaluation.
+Based on our analysis, due to the potential nonlinearity shown in the residual graph for Dose (Figure 6), we believe applying a log transformation or adding higher order terms in future work may help improve the model results. Since the Group and Substrate variables did not show any limitations to supporting the independence assumption, trying to evaluate and improve the Dose variable is a priority. Additionally, to address the few outliers present in the Residuals and Random Effects QQ Plot (Figure 4), taking a closer look at the data to evaluate these areas is important in order to find potential data entry errors or a cause to the skewed points. A transformation to the model and looking at other diagnostics including Cook’s distance or leverage are a part of the next steps to account for the normality assumption. To add on, because there could be potential confounding effects from dPsi, Redox, e-1 leak, auranofin, and cdnb, it would be beneficial to check for any correlations between these variables and $JO_2$, Dose, and Substrate on a deeper level. Maybe getting access to the dataset with these points instead of looking solely based on the plots provided would help support a more thorough evaluation.
 
 \pagebreak
 
@@ -74,6 +80,7 @@ library(readr)
 library(lme4)
 library(kableExtra)
 library(patchwork)
+library(MuMIn)
 
 knitr::opts_chunk$set(echo = FALSE)
 ```
@@ -127,8 +134,6 @@ data_plot <- data_cleaned |>
   mutate(dose = as.numeric(dose))
 ```
 
-Figure 1: Scatterplots of JO2 versus ΔGATP, faceted by substrate type and separated by genotype (Tg in teal, NT in red). Each point represents an individual observation. The plots illustrate generally higher JO2 in Tg mitochondria, increasing trends with dose, and variability in baseline metabolic activity across subjects.
-
 ```{r fig-1, fig.cap="Scatterplots of $J O_{2}$ versus $\\Delta G_{ATP}$, faceted by substrate type and separated by genotype (Tg in teal, NT in red). Each point represents an individual observation. The plots illustrate generally higher $J O_{2}$ in Tg mitochondria, increasing trends with dose, and variability in baseline metabolic activity across subjects.", warning=FALSE}
 
 ggplot(data_plot, aes(dose, Value,
@@ -145,9 +150,7 @@ ggplot(data_plot, aes(dose, Value,
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Figure 2: Mean JO2 with standard errors plotted against ΔGATP, grouped by substrate and genotype. Excluding the −12.95 ΔGATP condition, the relationship between JO2 and workload appears approximately linear. Genotype effects are consistent for OcM and PcM, while they become more pronounced at higher workloads for GM, PM, PMOc, and PMPc.
-
-```{r fig-2, fig.cap="Mean $J O_{2}$ with standard errors plotted against $\\Delta G_{ATP}$, grouped by substrate and genotype. Excluding the $-12.95\\, \\Delta G_{ATP}$ condition, the relationship between $J O_{2}$ and workload appears approximately linear. Genotype effects are consistent for OcM and PcM, while they become more pronounced at higher workloads for GM, PM, PMOc, and PMPc.", warning=FALSE}
+```{r fig-2, fig.cap="Mean $J O_{2}$ with standard errors plotted against $\\Delta G_{ATP}$, grouped by substrate and genotype. Excluding the $-12.95\\, \\Delta G_{ATP}$ condition, the relationship between $J O_{2}$ and workload appears approximately linear. Genotype effects are consistent for OcM and PcM, while they become more pronounced at higher workloads for GM, PM, PMOc, and PMPc.", warning=FALSE, message=FALSE}
 
 # calculate mean and se for each group
 sum_df <- data_plot |>
@@ -193,8 +196,6 @@ lmm_full_subject <- lmer(
 )
 ```
 
-Table 1:
-
 ```{r message=FALSE}
 # compare with pair random effect
 lmm_full_pair <- lmer(
@@ -210,8 +211,6 @@ kable(comp_random,
       caption = "Model comparison between pair and subject random effects") |>
   kable_styling(latex_options = "HOLD_position")
 ```
-
-Table 2:
 
 ```{r message=FALSE}
 # compare with 2-way interaction terms
@@ -229,9 +228,7 @@ kable(comp_fix,
   kable_styling(latex_options = "HOLD_position")
 ```
 
-Figure 3 for results: CAPTION NEEDED
-
-```{r}
+```{r fig-3, fig.cap="CAPTION!!!", warning=FALSE}
 # sequence of doses for smooth fitted curves
 dose_seq <- seq(min(data_model$dose),
                 max(data_model$dose),
@@ -269,9 +266,7 @@ ggplot() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Figure 4: Shows Q-Q plots of residuals and random effects based on the model. Most data points follow the red diagonal line, supporting normality. There are a few outliers present near the tail ends.
-
-```{r}
+```{r fig-4, fig.cap="Shows Q-Q plots of residuals and random effects based on the model. Most data points follow the red diagonal line, supporting normality. There are a few outliers present near the tail ends."}
 # Plot residuals and random effects side by side
 par(mfrow = c(1, 2), las = 1)
 
@@ -284,9 +279,7 @@ qqnorm(unlist(ranef(lmm_full_subject)$Subject), main = "Random Effects")
 qqline(unlist(ranef(lmm_full_subject)$Subject), col = "red")
 ```
 
-Figure 5: Shows the Residual vs. Fitted Values. Points are randomly spread out about the zero line, which supports the constant variance assumption. 
-
-```{r}
+```{r fig-5, fig.cap="Shows the Residual vs. Fitted Values. Points are randomly spread out about the zero line, which supports the constant variance assumption."}
 # Extract residuals and fitted values
 resid_vals <- resid(lmm_full_subject)
 fitted_vals <- fitted(lmm_full_subject)
@@ -302,9 +295,7 @@ p1 <- ggplot(data.frame(Fitted = fitted_vals, Residuals = resid_vals),
 p1
 ```
 
-Figure 6: Shows box plots for Group and Substrate variables, and scatterplot for Dose variable. Slight curvature shown in Residuals by Dose, which affects independence assumption.
-
-```{r}
+```{r fig-6, fig.cap="Shows box plots for Group and Substrate variables, and scatterplot for Dose variable. Slight curvature shown in Residuals by Dose, which affects independence assumption."}
 # Extract residuals
 resid_vals <- resid(lmm_full_subject)
 
@@ -335,14 +326,15 @@ p3 <- ggplot(data_resid, aes(x = dose, y = Residuals)) +
 p1 + p2 + p3
 ```
 
-Figure 7:
-
 ```{r}
 # r squared calculation
-library(MuMIn)
 r2_values <- r.squaredGLMM(lmm_full_subject)
-r2_values
 
 # R2m = marginal R² (fixed effects)
 # R2c = conditional R² (fixed + random effects)
+
+kable(r2_values, 
+      digits = 3, 
+      caption = "Marginal and conditional $R^2$ for the final mixed-effects model.") |>
+  kable_styling(latex_options = "HOLD_position")
 ```
