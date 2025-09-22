@@ -23,6 +23,17 @@ editor: visual
 
 ## Implementation
 
+$$
+JO2_{ij} = \beta_0 + \beta_1 Group_i + \beta_2 Dose_i + \beta_3^{\top} Substrate_i \\
+\quad + \beta_4 (Group_i*Dose_i) + \beta_5^{\top} (Group_i*Substrate_i) + \beta_6^{\top} (Dose_i*Substrate_i) \\
+\quad + \beta_7^{\top} (Group_i*Dose_i*Substrate_i) + u_j + \varepsilon_{ij}
+$$
+
+$$
+u_j \sim N(0, \sigma^2_{\text{Subject}}) \\
+\varepsilon_{ij} \sim N(0, \sigma^2)
+$$
+
 ## Evaluation
 
 # Results
@@ -237,7 +248,8 @@ p2 <- ggplot(data_resid, aes(x = substrate, y = Residuals)) +
   theme_minimal() +
   labs(title = "Residuals by Substrate")
 
-# Residuals vs dose 
+# Residuals vs dose (continuous or factor?)
+# If continuous:
 p3 <- ggplot(data_resid, aes(x = dose, y = Residuals)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess", se = FALSE, color = "blue") +
