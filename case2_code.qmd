@@ -485,8 +485,17 @@ p3 <- ggplot(data_resid, aes(x = dose, y = Residuals)) +
 # Arrange plots side by side
 library(patchwork)
 p1 + p2 + p3
-
 ```
+```{r}
+# r squared calculation
+library(MuMIn)
+r2_values <- r.squaredGLMM(lmm_full_subject)
+r2_values
+
+# R2m = marginal R² (fixed effects)
+# R2c = conditional R² (fixed + random effects)
+```
+
 
 
 
