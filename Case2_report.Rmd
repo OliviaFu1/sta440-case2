@@ -237,8 +237,7 @@ p2 <- ggplot(data_resid, aes(x = substrate, y = Residuals)) +
   theme_minimal() +
   labs(title = "Residuals by Substrate")
 
-# Residuals vs dose (continuous or factor?)
-# If continuous:
+# Residuals vs dose 
 p3 <- ggplot(data_resid, aes(x = dose, y = Residuals)) +
   geom_point(alpha = 0.6) +
   geom_smooth(method = "loess", se = FALSE, color = "blue") +
