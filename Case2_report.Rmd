@@ -68,19 +68,19 @@ We also computed the $R^2$ values for our model. The marginal $R^2$ (fixed-effec
 
 # Results
 
-## **(1) Model formulation and fitting**
+## **Model formulation and fitting**
 
 We modeled mitochondrial oxygen consumption rate $JO_2$ as a function of genotype, substrate, and dose, while accounting for subject-level heterogeneity using a mixed-effects model. This framework allowed us to evaluate both baseline differences and dose–response trends between genotypes, conditional on substrate type.
 
-## **(2) Genetic associations with mitochondrial efficiency**
+## **Genetic associations with mitochondrial efficiency**
 
 To evaluate the overall genetic effect, we first conducted a likelihood-ratio test comparing the full model with a reduced model that excluded all genotype terms (Table 4). The lower AIC and BIC values, together with the significant test statistic, indicated that genotype contributes significantly to variation in oxygen flux.
 
 Following this, we examined the fixed-effect coefficients in the final model (Table 5). While the intercept value should be interpreted with caution as it represents an extrapolation at dose=0, we found that `Tg` group had a higher overall level of oxygen flux than `NT` (estimate = 22,297; p = 0.001) through this term. Moreover, the genotype–dose interaction (estimate = 1,514; p = 0.001) showed that `Tg` exhibited a significantly steeper positive slope than `NT`, indicating that genetic effects on mitochondrial efficiency increased with dose. Hence, `Tg` groups overall demonstrated higher mitochondrial efficiency than `NT` groups, and this difference was amplified at higher dose levels.
 
-We next assessed whether genetic effects varied across substrates using estimated marginal means (package: `emmeans`) derived from our final mixed-effects model. Pairwise contrasts between groups (`Tg − NT`) were evaluated with t-tests based on the model’s fixed effects. Slope differences between treatment groups were significant only for `GM`, `PMOc`, and `PMPc` substrates, where `Tg` exhibited steeper positive slopes than `NT` for all (Table 6). This was consistent with the visualization, in which slope differences appeared more subtle for `OcM`, `PcM`, and `PM` (Figure 3). In contrast, `OcM` and `PcM` showed significantly different baseline levels despite having similar slopes, as indicated in Table 7 and reflected by the consistently higher $JO_2$​ values for `Tg` running nearly parallel to `NT`. These results suggest that genetic effects depend on substrate, expressed either as greater changes in slope for some substrates or as higher baseline levels for others. No significant genotype dependence was detected for `PM`.
+We next assessed whether genetic effects varied across substrates using estimated marginal means (package: `emmeans`) derived from our final mixed-effects model. Pairwise contrasts between groups (`Tg − NT`) were evaluated with t-tests based on the model’s fixed effects. Slope differences between treatment groups were significant only for `GM`, `PMOc`, and `PMPc` substrates, where `Tg` exhibited steeper positive slopes than `NT` for all (Table 6). This was consistent with the visualization, in which slope differences appeared more subtle for `OcM`, `PcM`, and `PM` (Figure 3). In contrast, `OcM` and `PcM` showed significantly different baseline levels between `Tg` and `NT`, despite having similar slopes (Table 7). These results suggest that genetic effects depend on substrate, expressed either as greater changes in slope for some substrates or as higher baseline levels for others. No significant genotype dependence was detected for `PM`.
 
-## (3) Graphical summary of associations
+## Graphical summary of associations
 
 To visually summarize these associations, we plotted regression lines for `Tg` and `NT` groups across dose levels, faceted by substrate (Figure 3). This graphical summary highlights the key patterns of genetic association, enabling a straightforward comparison of slope differences and baseline offsets across substrates. The plot effectively complements the statistical results by illustrating how genetic effects on mitochondrial efficiency manifest differently depending on substrate and dose.
 
